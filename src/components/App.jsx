@@ -1,8 +1,12 @@
-import React, { useState } from "react";
-import Header from "./Header";
-import Footer from "./Footer";
-import Note from "./Note";
-import CreateArea from "./CreateArea";
+import React, {useState} from "react";
+import Footer from "../components/Footer";
+
+import Note from "../components/Note";
+import CreateArea from "../components/CreateArea";
+import Header from "../components/Header"
+
+
+
 
 function App() {
   const [notes, setNotes] = useState([]);
@@ -23,7 +27,7 @@ function App() {
 
   return (
     <div>
-      <Header />
+     <Header />
       <CreateArea onAdd={addNote} />
       {notes.map((noteItem, index) => {
         return (
@@ -35,10 +39,12 @@ function App() {
             onDelete={deleteNote}
           />
         );
-      })}
-      <Footer />
+      })} 
+     
+      
+      
     </div>
   );
 }
 
-export default App;
+export default App;

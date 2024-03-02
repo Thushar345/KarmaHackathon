@@ -1,68 +1,114 @@
-import React, { useState } from "react";
-import AddIcon from "@material-ui/icons/Add";
-import Fab from "@material-ui/core/Fab";
-import Zoom from "@material-ui/core/Zoom";
+import React, { useState, useEffect } from "react";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
+import Button from "@material-ui/core/Button";
+import MicIcon from "@material-ui/icons/Mic";
+import SaveIcon from "@material-ui/icons/Save";
+
+const options = {
+ language: "en-US",
+};
 
 function CreateArea(props) {
-  const [isExpanded, setExpanded] = useState(false);
+ const [isExpanded, setExpanded] = useState(false);
+ const [note, setNote] = useState({ title: "", content: "" });
+ const [summarizedText, setSummarizedText] = useState(""); // New state for summarized text
 
-  const [note, setNote] = useState({
-    title: "",
-    content: ""
-  });
+ const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition(options);
 
-  function handleChange(event) {
+  // Correctly placed useEffect hook
+  useEffect(() => {
+    if (transcript) {
+      setNote((prevNote) => ({ ...prevNote, content: transcript }));
+    }
+ }, [transcript]); 
+ if (!browserSupportsSpeechRecognition) {
+    return <span>Browser doesn't support speech recognition.</span>;
+ }
+
+ const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setNote(prevNote => {
-      return {
-        ...prevNote,
-        [name]: value
-      };
-    });
-  }
+    setNote((prevNote) => ({
+      ...prevNote,
+      [name]: value,
+    }));
+ };
 
-  function submitNote(event) {
-    props.onAdd(note);
-    setNote({
-      title: "",
-      content: ""
-    });
+ const submitNote = (event) => {
+    props.onAdd({ ...note });
+    setNote({ title: "", content: "" });
+    resetTranscript();
     event.preventDefault();
-  }
+ };
 
-  function expand() {
+ const expand = () => {
     setExpanded(true);
-  }
+ };
 
-  return (
-    <div>
-      <form className="create-note">
-        {isExpanded && (
-          <input
-            name="title"
-            onChange={handleChange}
-            value={note.title}
-            placeholder="Title"
-          />
-        )}
+ const handleListen = () => {
+    if (listening) {
+      resetTranscript();
+    } else {
+      SpeechRecognition.startListening();
+    }
+ };
 
-        <textarea
-          name="content"
-          onClick={expand}
+ const summarizeContent = async () => {
+    try {
+      const response = await fetch("https://fbba-103-147-209-201.ngrok-free.app/summarize", {
+        method: "POST",
+        body: note.content,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSummarizedText(result.msg);
+        setNote((prevNote) => ({ ...prevNote, content: result.msg }));
+      } else {
+        console.error("Error fetching summarized text");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+ };
+
+// Dependency array ensures this effect runs when transcript changes
+
+ return (
+    <form className="create-note">
+      {isExpanded && (
+        <input
+          name="title"
           onChange={handleChange}
-          value={note.content}
-          placeholder="Take a note..."
-          rows={isExpanded ? 3 : 1}
+          value={note.title}
+          placeholder="Title"
         />
-        <Zoom in={isExpanded}>
-          <Fab onClick={submitNote}>
-            <AddIcon />
-          </Fab>
-        </Zoom>
-      </form>
-    </div>
-  );
+      )}
+
+      <textarea
+        name="content"
+        onClick={expand}
+        onChange={handleChange}
+        value={note.content || transcript}
+        placeholder="Take a note..."
+        rows={isExpanded ? 3 : 1}
+      />
+
+      <Button className="speech" onClick={handleListen}>
+        <MicIcon />
+      </Button>
+
+      <Button className="summarize" style={{ backgroundColor: "#EAEAEA" , fontFamily:"cursive"}} onClick={summarizeContent} disabled={!note.content && !transcript}>
+        Summarize
+      </Button>
+
+      <span style={{ marginRight: "10px" }} />
+
+      <Button className="save" style={{ backgroundColor: "#EAEAEA", fontFamily:"cursive" }} onClick={submitNote} disabled={!note.content && !transcript}>
+        Save
+      </Button>
+    </form>
+ );
 }
 
 export default CreateArea;
